@@ -31,6 +31,25 @@ def infer_for_person(cfg: Dict, person_key: str, ref_date: Optional[pd.Timestamp
         end_hour=cfg['night_window']['end_hour'],
         in_bed_value=cfg['mattress']['in_bed_value']
     )
+
+    # 加入 person 列以匹配训练的类别特征
+    feat['person'] = person_key
+
+    # 与训练一致的滞后/滚动特征（仅用历史：shift后rolling）
+    lag_base_cols = [
+        'wrist_心率_mean',
+        'mattress_in_bed_sum',
+        'air_二氧化碳_mean',
+    ]
+    lag_base_cols = [c for c in lag_base_cols if c in feat.columns]
+    if lag_base_cols:
+        feat = feat.sort_values(['person', 'night_id']).reset_index(drop=True)
+        for c in lag_base_cols:
+            grp = feat.groupby('person')[c]
+            feat[f'{c}_lag1'] = grp.shift(1)
+            feat[f'{c}_roll3_mean'] = grp.shift(1).rolling(3, min_periods=1).mean().reset_index(level=0, drop=True)
+            feat[f'{c}_trend3'] = grp.shift(1) - grp.shift(3)
+
     # 构造标签日期（night_id+1天）
     feat['label_date'] = pd.to_datetime(feat['night_id']) + pd.Timedelta(days=1)
     feat['label_date'] = feat['label_date'].dt.date
@@ -58,6 +77,15 @@ def predict(cfg_path: str = 'src/config.yaml', person_key: str = 'person_A', ref
         meta = json.load(f)
 
     feat = infer_for_person(cfg, person_key, ref_date)
+
+    # 确保所有训练期特征列存在（缺失则填NaN），包括 person
+    for col in meta['feature_cols']:
+        if col not in feat.columns:
+            if col == 'person':
+                feat[col] = person_key
+            else:
+                feat[col] = pd.NA
+
     X = feat[meta['feature_cols']]
     if len(X) == 0:
         raise ValueError('该日期前后无可用数据，请尝试不指定 --date 或选择其他日期')
@@ -84,7 +112,6 @@ def predict(cfg_path: str = 'src/config.yaml', person_key: str = 'person_A', ref
             out['total'] = total_calc.clip(0, 100).round(2)
             out['sleep_index'] = out['total']
         else:
-            # 兜底：若既无total又无维度分，按0处理
             out['total'] = 0.0
             out['sleep_index'] = 0.0
 

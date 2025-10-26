@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import KFold
@@ -47,6 +47,21 @@ def build_dataset(cfg: Dict) -> pd.DataFrame:
         feats_all.append(feat)
     feats = pd.concat(feats_all, ignore_index=True)
 
+    # 轻量滞后/滚动特征：在与标签合并前构造，避免信息泄露（仅用历史窗口）
+    lag_base_cols = [
+        'wrist_心率_mean',
+        'mattress_in_bed_sum',
+        'air_二氧化碳_mean',
+    ]
+    lag_base_cols = [c for c in lag_base_cols if c in feats.columns]
+    if lag_base_cols:
+        feats = feats.sort_values(['person', 'night_id']).reset_index(drop=True)
+        for c in lag_base_cols:
+            grp = feats.groupby('person')[c]
+            feats[f'{c}_lag1'] = grp.shift(1)
+            feats[f'{c}_roll3_mean'] = grp.shift(1).rolling(3, min_periods=1).mean().reset_index(level=0, drop=True)
+            feats[f'{c}_trend3'] = grp.shift(1) - grp.shift(3)
+
     # 标签对齐：night_id对应的日期为 night_id+1 的白天（起床后填写）
     feats['label_date'] = pd.to_datetime(feats['night_id']) + pd.Timedelta(days=1)
     feats['label_date'] = feats['label_date'].dt.date
@@ -65,18 +80,19 @@ def train(cfg_path: str = 'src/config.yaml', n_estimators: int = 400) -> None:
 
     # 目标：5个维度分 + 总分(total)
     target_cols = ['dim1', 'dim2', 'dim3', 'dim4', 'dim5', 'total']
-    drop_cols = set(['person', 'night_id', 'label_date'] + target_cols)
-    feature_cols = [c for c in data.columns if c not in drop_cols]
+    drop_cols = set(['night_id', 'label_date'] + target_cols)
+    feature_cols_all = [c for c in data.columns if c not in drop_cols]
 
-    X = data[feature_cols].copy()
+    # 数值与类别特征划分（引入 person 类别特征）
+    cat_features = [c for c in ['person'] if c in feature_cols_all]
+    numeric_features = [c for c in feature_cols_all if c not in cat_features and pd.api.types.is_numeric_dtype(data[c])]
+
+    X = data[numeric_features + cat_features].copy()
     y = data[target_cols].copy()
 
-    # 仅使用数值型特征
-    numeric_features = [c for c in feature_cols if pd.api.types.is_numeric_dtype(X[c])]
-    X = X[numeric_features]
-
     pre = ColumnTransformer([
-        ('num', Pipeline(steps=[('imp', SimpleImputer(strategy='median')), ('sc', StandardScaler())]), numeric_features)
+        ('num', Pipeline(steps=[('imp', SimpleImputer(strategy='median')), ('sc', StandardScaler())]), numeric_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), cat_features)
     ])
 
     base = RandomForestRegressor(n_estimators=n_estimators, random_state=cfg['training']['random_state'])
@@ -99,7 +115,7 @@ def train(cfg_path: str = 'src/config.yaml', n_estimators: int = 400) -> None:
 
     os.makedirs(cfg['paths']['models_dir'], exist_ok=True)
     meta = {
-        'feature_cols': numeric_features,
+        'feature_cols': numeric_features + cat_features,
         'target_cols': target_cols,
         'cv_mae': cv_mae.tolist()
     }

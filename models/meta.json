@@ -38,7 +38,17 @@
     "air_湿度_min",
     "air_湿度_max",
     "sleep_duration_h",
-    "sleep_start_hour"
+    "sleep_start_hour",
+    "wrist_心率_mean_lag1",
+    "wrist_心率_mean_roll3_mean",
+    "wrist_心率_mean_trend3",
+    "mattress_in_bed_sum_lag1",
+    "mattress_in_bed_sum_roll3_mean",
+    "mattress_in_bed_sum_trend3",
+    "air_二氧化碳_mean_lag1",
+    "air_二氧化碳_mean_roll3_mean",
+    "air_二氧化碳_mean_trend3",
+    "person"
   ],
   "target_cols": [
     "dim1",
@@ -49,11 +59,11 @@
     "total"
   ],
   "cv_mae": [
-    0.6046166666666666,
-    0.8881499999999999,
-    0.8004833333333334,
-    0.80365,
-    0.7123166666666666,
-    11.156400000000001
+    0.5405833333333333,
+    0.7274333333333334,
+    0.8,
+    0.7308333333333332,
+    0.71235,
+    9.890866666666664
   ]
 }
