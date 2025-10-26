@@ -1,0 +1,45 @@
+# 人员与设备ID映射（基于PDF文件名配对）
+people:
+  person_A:
+    name: A
+    wrist_id: 3959
+    mattress_id: 3224
+  person_B:
+    name: B
+    wrist_id: 4163
+    mattress_id: 3979
+  person_C:
+    name: C
+    wrist_id: 4353
+    mattress_id: 3223
+  person_D:
+    name: D
+    wrist_id: 4494
+    mattress_id: 3221
+
+# 空气监测设备（宿舍共享）
+air_monitor:
+  device_id: 24438
+
+# 数据路径设置
+paths:
+  base_dir: .
+  exports_dir: 数据导出
+  pdf_dir: .
+  models_dir: models
+  outputs_dir: outputs
+
+# 夜间窗口定义（用于聚合昨晚数据 → 次日标签）
+night_window:
+  start_hour: 20   # 当天20:00作为夜间开始
+  end_hour: 12     # 次日12:00作为夜间结束
+  timezone: Asia/Shanghai
+
+# 床垫“在床垫状态”的取值定义
+mattress:
+  in_bed_value: 3   # 3 表示在床（根据样例3979），如设备不同可调整
+
+# 训练设置
+training:
+  cv_folds: 5
+  random_state: 42
