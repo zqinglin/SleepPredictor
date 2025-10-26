@@ -34,7 +34,7 @@ python -m src.train --config src/config.yaml --n_estimators 400
 python -m src.infer --config src/config.yaml --person person_A
 
 # 指定人员与起床日期（昨晚的下一天）
-python -m src.infer --config src/config.yaml --person person_B --date 2025-10-17
+python -m src.infer --config src/config.yaml --person person_A --date 2025-10-11
 ```
 输出：
 - `outputs/prediction_{person}.csv`，包含：

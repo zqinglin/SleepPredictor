@@ -47,7 +47,8 @@ def _parse_date_maybe_year(s: str, default_year: int = 2025) -> pd.Timestamp:
         return pd.NaT
 
 
-def load_labels_from_csvs(cfg: Dict, base_dir: str = '.') -> pd.DataFrame:
+def load_labels_from_csvs(cfg: Dict) -> pd.DataFrame:
+    base_dir = cfg['paths'].get('labels_dir', '.')
     files = [f for f in os.listdir(base_dir) if f.endswith('.csv') and ('手环' in f and '床垫' in f)]
     dfs: List[pd.DataFrame] = []
     for fname in files:
@@ -75,7 +76,7 @@ def load_labels_from_csvs(cfg: Dict, base_dir: str = '.') -> pd.DataFrame:
         out = out.dropna(subset=['date'])
         dfs.append(out)
     if not dfs:
-        raise RuntimeError('未在根目录找到“手环XXXX 床垫YYYY.csv”的标签文件。')
+        raise RuntimeError('未在 labels_dir 找到“手环XXXX 床垫YYYY.csv”的标签文件。')
     labels = pd.concat(dfs, ignore_index=True)
     labels = labels.drop_duplicates(subset=['date', 'person']).sort_values(['person', 'date'])
     return labels

@@ -51,8 +51,8 @@ def build_dataset(cfg: Dict) -> pd.DataFrame:
     feats['label_date'] = pd.to_datetime(feats['night_id']) + pd.Timedelta(days=1)
     feats['label_date'] = feats['label_date'].dt.date
 
-    # 读取根目录CSV标签
-    labels = load_labels_from_csvs(cfg, base_dir='.')
+    # 读取 labels_dir 下的CSV标签
+    labels = load_labels_from_csvs(cfg)
 
     data = feats.merge(labels, left_on=['label_date', 'person'], right_on=['date', 'person'], how='inner')
     data = data.drop(columns=['date'])
@@ -71,7 +71,7 @@ def train(cfg_path: str = 'src/config.yaml', n_estimators: int = 400) -> None:
     X = data[feature_cols].copy()
     y = data[target_cols].copy()
 
-    # 仅使用数值型特征，过滤掉datetime/object列
+    # 仅使用数值型特征
     numeric_features = [c for c in feature_cols if pd.api.types.is_numeric_dtype(X[c])]
     X = X[numeric_features]
 

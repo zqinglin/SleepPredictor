@@ -24,8 +24,9 @@ air_monitor:
 # 数据路径设置
 paths:
   base_dir: .
-  exports_dir: 数据导出
-  pdf_dir: .
+  exports_dir: data          # 原为 “数据导出”，现统一到 data/
+  labels_dir: data           # 主观评分CSV（手环XXXX 床垫YYYY.csv）所在目录
+  pdf_dir: data              # 若仍需PDF（当前未使用），也指向 data
   models_dir: models
   outputs_dir: outputs
 
@@ -37,7 +38,7 @@ night_window:
 
 # 床垫“在床垫状态”的取值定义
 mattress:
-  in_bed_value: 3   # 3 表示在床（根据样例3979），如设备不同可调整
+  in_bed_value: 3   # 兼容 3/4，在代码中已做容错
 
 # 训练设置
 training:

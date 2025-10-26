@@ -71,13 +71,22 @@ def predict(cfg_path: str = 'src/config.yaml', person_key: str = 'person_A', ref
         pred
     ], axis=1)
 
-    # 睡眠质量指数（100分制）：若PDF总分即为100分制，则直接使用；否则归一
-    if 'total' in out.columns and out['total'].notna().all():
+    # 分数后处理：dim1..dim5 in [1,5] 四舍五入；total in [0,100] 四舍五入
+    score_cols = [c for c in cols if c != 'total' and c in out.columns]
+    if score_cols:
+        out[score_cols] = out[score_cols].clip(1, 5).round(1)
+    if 'total' in out.columns:
+        out['total'] = out['total'].clip(0, 100).round(2)
         out['sleep_index'] = out['total']
     else:
-        score_cols = [c for c in cols if c != 'total']
-        base = out[score_cols].mean(axis=1)
-        out['sleep_index'] = (base / base.max()) * 100.0
+        if score_cols:
+            total_calc = out[score_cols].sum(axis=1) / 25.0 * 100.0
+            out['total'] = total_calc.clip(0, 100).round(2)
+            out['sleep_index'] = out['total']
+        else:
+            # 兜底：若既无total又无维度分，按0处理
+            out['total'] = 0.0
+            out['sleep_index'] = 0.0
 
     os.makedirs(cfg['paths']['outputs_dir'], exist_ok=True)
     save_path = os.path.join(cfg['paths']['outputs_dir'], f'prediction_{person_key}.csv')
